@@ -1,3 +1,5 @@
+import torch
+
 class Vocabulary():
     def __init__(self, token_to_index=None):
 
@@ -14,7 +16,7 @@ class Vocabulary():
     @classmethod
     def from_serializable(cls, contents):
         """Instaites the Vocabulary from a serialized dictionary"""
-        retun cls(**contents)
+        return cls(**contents)
 
 
     def add_token(self, token):
@@ -195,3 +197,14 @@ class NMTVectorizer(object):
                 "max_source_length": self.max_source_length,
                 "max_target_length": self.max_target_length}
 
+def generate_nmt_batches(dataset, batch_size, shuffle=True, drop_last=True, device='cpu'):
+    """A generator function which wraps the PyTorch DataLoader; NMT version """
+    dataloader = DataLoader(dataset, batch_size,
+        shuffle=shuffle, drop_last=drop_last)
+    for data_dict in dataloader:
+        lengths = data_dict['x_source_length'].numpy()
+        sorted_length_indices = lenghts.argsort()[::-1].tolist()
+        out_data_dict = {}
+        for name, tensor in data_dict.items():
+            out_data_dict[name] = data_dict[name][sorted_length_indices].to(device)
+            yield out_data_dict

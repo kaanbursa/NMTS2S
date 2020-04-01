@@ -201,8 +201,8 @@ class SequenceVocabulary(Vocabulary):
         return contents
 
     def lookup_token(self, token):
-        if self._unk_index >= 0:
-            return self._token_to_index.get(token, self._unk_index)
+        if self.unk_index >= 0:
+            return self._token_to_index.get(token, self.unk_index)
         else:
             return self._token_to_index[token]
 
@@ -242,7 +242,7 @@ class NMTVectorizer(object):
                 indices (list): list of integers
         """
         indices = [self.source_vocab.begin_seq_index]
-        indices.extend(self.source_vocab.look_token(token) for token in text.split(' '))
+        indices.extend(self.source_vocab.lookup_token(token) for token in text.split(' '))
         indices.append(self.source_vocab.end_seq_index)
         return indices
 
@@ -263,7 +263,7 @@ class NMTVectorizer(object):
             target_vector_length = self.max_target_length + 1
 
         source_indices = self._get_source_indices(source_text)
-        source_vector = self_vectorize(source_indices, vector_length = source_vector_length, mask_index = self.source_vocab.mask_index)
+        source_vector = self._vectorize(source_indices, vector_length = source_vector_length, mask_index = self.source_vocab.mask_index)
 
         target_x_indices, target_y_indices = self._get_target_indices(target_text)
         target_x_vector = self._vectorize(target_x_indices, vector_length = target_vector_length,
@@ -319,14 +319,39 @@ class NMTVectorizer(object):
                 "max_source_length": self.max_source_length,
                 "max_target_length": self.max_target_length}
 
+    def save_vectorizer(self, vectorizer_filepath):
+        """ save the vec to disk using json"""
+        with open(vectorizer_filepath, 'w') as fp:
+            json.dump(self._vectorizer.to_serializable(), fp)
+
+
+    def get_vectorizer(self):
+        return self._vectorizer
+
+
+    def set_split(self, split='train'):
+        self._target_split = split
+        self._target_df, self._target_size = self._lookup_dict[split]
+
+    def __len__(self):
+        return self._target_size
+
+    def __getitem__(self,index):
+        row = self._target_df.iloc[index]
+        vector_dict = self._vectorizer.vectorize(row.source_language, row.target_language)
+
+        return {"x_source":vector_dict['source_vector'], "x_target":vector_dict['target_x_vector'], "y_target":vector_dict['target_y_vector'],
+                 "x_source_length": vector_dict['source_length']}
+
+
 def generate_nmt_batches(dataset, batch_size, shuffle=True, drop_last=True, device='cpu'):
     """A generator function which wraps the PyTorch DataLoader; NMT version """
     dataloader = DataLoader(dataset, batch_size,
         shuffle=shuffle, drop_last=drop_last)
     for data_dict in dataloader:
         lengths = data_dict['x_source_length'].numpy()
-        sorted_length_indices = lenghts.argsort()[::-1].tolist()
+        sorted_length_indices = lengths.argsort()[::-1].tolist()
         out_data_dict = {}
         for name, tensor in data_dict.items():
             out_data_dict[name] = data_dict[name][sorted_length_indices].to(device)
-            yield out_data_dict
+        yield out_data_dict

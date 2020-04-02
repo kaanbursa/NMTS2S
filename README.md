@@ -19,3 +19,5 @@ In training for each time step it looks at the real target value meaning it has 
 For training we used eng-french simple dataset with 100k examples. Trained it on Nvidia RTX 2070 for 2 hours for 100 epochs. We also implemented early stopping when the loss is not decreasing anymore.
 
 **Results**  
+Here is an attention on a sentence.
+![Attention of the output sentence](./attention.png)

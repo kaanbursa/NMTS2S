@@ -21,3 +21,7 @@ For training we used eng-french simple dataset with 100k examples. Trained it on
 **Results**  
 Here is an attention on a sentence.
 ![Attention of the output sentence](./attention.png)
+
+
+### Reference
+Delip Rao, Brian McMahan - [Natural Language Processing with PyTorch](http://shop.oreilly.com/product/0636920063445.do)
